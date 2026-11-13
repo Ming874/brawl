@@ -1,0 +1,20 @@
+{
+  "name": "fluffy-brawl",
+  "version": "1.0.0",
+  "description": "毛毛大亂鬥 - 多人連線動物派對遊戲（釣魚、擂台大亂鬥、好友系統）",
+  "main": "server.js",
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "three": "^0.187.0",
+    "ws": "^8.23.0"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.65.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

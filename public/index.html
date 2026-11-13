@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>毛毛大亂鬥</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐶</text></svg>">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{ "imports": { "three": "/vendor/three/build/three.module.js", "three/addons/": "/vendor/three/examples/jsm/" } }
+</script>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="ui">
+  <!-- 載入中 -->
+  <div id="loading" class="screen center">
+    <div class="loading-box">
+      <div class="logo">毛毛<span>大亂鬥</span></div>
+      <div class="paws"><i></i><i></i><i></i></div>
+      <div id="loadingText">正在連線到伺服器…</div>
+    </div>
+  </div>
+
+  <!-- 主選單 -->
+  <div id="menu" class="screen hidden">
+    <div class="panel menu-main">
+      <div class="logo">毛毛<span>大亂鬥</span></div>
+      <div class="subtitle">憨憨動物 · 釣魚 · 大亂鬥</div>
+      <label class="field">暱稱<input id="nameInput" maxlength="12" autocomplete="off"></label>
+      <button id="btnCreate" class="btn big primary">🏠 建立房間</button>
+      <div class="join-row">
+        <input id="joinCode" maxlength="5" placeholder="房間代碼" autocomplete="off">
+        <button id="btnJoin" class="btn">加入</button>
+      </div>
+      <button id="btnCustomize" class="btn">🎩 角色與裝扮</button>
+      <button id="btnFriends" class="btn">👫 好友 <span class="badge hidden" id="friendBadge">0</span></button>
+      <button id="btnBook" class="btn">📖 釣魚圖鑑</button>
+      <button id="btnSettings" class="btn ghost">⚙️ 設定</button>
+    </div>
+    <div class="panel my-code">
+      <div class="small">我的玩家代碼（給朋友加好友用）</div>
+      <div class="code-row"><b id="myCode">----</b><button id="btnCopyCode" class="btn tiny">複製</button></div>
+    </div>
+  </div>
+
+  <!-- 裝扮 -->
+  <div id="customize" class="screen hidden">
+    <div class="panel custom-panel">
+      <h2>角色與裝扮</h2>
+      <div class="section-title">角色</div>
+      <div class="species-row" id="speciesRow"></div>
+      <div class="section-title">帽子</div>
+      <div class="item-grid" id="hatGrid"></div>
+      <div class="swatches" id="hatColors"></div>
+      <div class="section-title">圍巾</div>
+      <div class="item-grid" id="scarfGrid"></div>
+      <div class="swatches" id="scarfColors"></div>
+      <div class="custom-actions">
+        <button id="btnRandomLook" class="btn ghost">🎲 隨機</button>
+        <button id="btnSaveLook" class="btn primary">✔ 完成</button>
+      </div>
+    </div>
+    <div class="rotate-hint">拖曳滑鼠可以旋轉角色</div>
+  </div>
+
+  <!-- 遊戲中 HUD -->
+  <div id="hud" class="hidden">
+    <div class="hud-room panel small-panel">
+      <div>房間 <b id="hudRoomCode">-----</b> <button id="btnCopyRoom" class="btn tiny">複製</button></div>
+      <div id="hudMode" class="hud-mode">🎣 湖畔釣魚</div>
+      <div id="hudPlayers" class="hud-players"></div>
+    </div>
+    <div id="brawlBar" class="brawl-bar hidden">
+      <div id="brawlRound"></div>
+      <div id="brawlScores" class="brawl-scores"></div>
+      <div id="brawlTimer"></div>
+    </div>
+    <div id="banner" class="banner hidden"></div>
+    <div id="subBanner" class="sub-banner hidden"></div>
+
+    <div id="dizzyMeter" class="dizzy hidden"><span>暈</span><div class="bar"><i></i></div></div>
+    <div id="struggle" class="struggle hidden">被抓住了！狂按 <b>空白鍵</b> 掙脫！<div class="bar"><i></i></div></div>
+
+    <!-- 釣魚 -->
+    <div id="castMeter" class="cast-meter hidden"><div class="label">拋竿力道</div><div class="bar"><i></i></div></div>
+    <div id="fishHint" class="fish-hint hidden"></div>
+    <div id="reelUI" class="reel hidden">
+      <div class="reel-title">按住 <b>左鍵</b> 收線！別讓線繃斷～</div>
+      <div class="reel-row">
+        <div class="tension"><div class="tension-fill"></div><div class="tension-label">張力</div></div>
+        <div class="progress"><div class="track"><div class="fish-icon">🐟</div></div><div class="progress-label">距離</div></div>
+      </div>
+    </div>
+    <div id="catchCard" class="catch-card hidden"></div>
+
+    <div id="chat" class="chat">
+      <div id="chatLog" class="chat-log"></div>
+      <input id="chatInput" class="chat-input hidden" maxlength="120" placeholder="輸入訊息，Enter 送出" autocomplete="off">
+    </div>
+    <div id="hints" class="hints"></div>
+    <div id="clickToPlay" class="click-to-play hidden">點一下畫面開始操作</div>
+  </div>
+
+  <!-- 遊戲選單 (ESC) -->
+  <div id="pauseMenu" class="modal hidden">
+    <div class="panel modal-panel pause-panel">
+      <h2>房間 <span id="pmCode"></span></h2>
+      <div class="section-title">玩家</div>
+      <div id="pmPlayers" class="pm-players"></div>
+      <div id="pmHost" class="pm-host">
+        <div class="section-title">遊戲模式（房主）</div>
+        <div class="mode-row">
+          <button class="btn mode-btn" data-mode="fishing">🎣 湖畔釣魚</button>
+          <button class="btn mode-btn" data-mode="brawl">🥊 擂台大亂鬥</button>
+        </div>
+        <div class="bot-row">
+          <button id="btnBotAdd" class="btn">🤖 加入電腦玩家</button>
+          <button id="btnBotRemove" class="btn ghost">移除電腦</button>
+        </div>
+      </div>
+      <div id="pmGuest" class="small muted">只有房主可以切換模式</div>
+      <div class="pm-actions">
+        <button id="btnInvite" class="btn">✉️ 邀請好友</button>
+        <button id="btnPmBook" class="btn">📖 圖鑑</button>
+        <button id="btnPmCustom" class="btn">🎩 裝扮</button>
+        <button id="btnPmSettings" class="btn ghost">⚙️ 設定</button>
+        <button id="btnPmHelp" class="btn ghost">🎮 操作說明</button>
+      </div>
+      <div class="pm-actions">
+        <button id="btnResume" class="btn primary">▶ 繼續遊戲</button>
+        <button id="btnLeave" class="btn danger">🚪 離開房間</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 好友 -->
+  <div id="friendsPanel" class="modal hidden">
+    <div class="panel modal-panel friends">
+      <button class="close" data-close>✕</button>
+      <h2>好友</h2>
+      <div class="small">我的玩家代碼：<b id="fpMyCode"></b> <button id="btnCopyCode2" class="btn tiny">複製</button></div>
+      <div class="add-friend">
+        <input id="friendCode" maxlength="9" placeholder="輸入好友的玩家代碼，例如 AB12-CD34" autocomplete="off">
+        <button id="btnAddFriend" class="btn primary">加好友</button>
+      </div>
+      <div id="requestsBox" class="hidden">
+        <div class="section-title">好友邀請</div>
+        <div id="requestList" class="list"></div>
+      </div>
+      <div class="section-title">好友列表</div>
+      <div id="friendList" class="list"></div>
+    </div>
+  </div>
+
+  <!-- 圖鑑 -->
+  <div id="bookPanel" class="modal hidden">
+    <div class="panel modal-panel book">
+      <button class="close" data-close>✕</button>
+      <h2>📖 釣魚圖鑑 <span id="bookCount" class="small"></span></h2>
+      <div id="bookGrid" class="book-grid"></div>
+    </div>
+  </div>
+
+  <!-- 設定 -->
+  <div id="settingsPanel" class="modal hidden">
+    <div class="panel modal-panel settings">
+      <button class="close" data-close>✕</button>
+      <h2>⚙️ 設定</h2>
+      <label class="field">畫質
+        <select id="setQuality">
+          <option value="high">高（毛茸茸毛髮、草地）</option>
+          <option value="medium">中</option>
+          <option value="low">低（筆電/較舊電腦）</option>
+        </select>
+      </label>
+      <label class="field">音量 <input id="setVolume" type="range" min="0" max="100"></label>
+      <label class="field">滑鼠靈敏度 <input id="setSens" type="range" min="20" max="200"></label>
+      <div class="small muted">畫質變更會在重新整理頁面後完整套用。</div>
+    </div>
+  </div>
+
+  <!-- 操作說明 -->
+  <div id="helpPanel" class="modal hidden">
+    <div class="panel modal-panel help">
+      <button class="close" data-close>✕</button>
+      <h2>🎮 操作說明</h2>
+      <div class="help-grid">
+        <div><kbd>W A S D</kbd> 移動</div><div><kbd>Shift</kbd> 奔跑</div>
+        <div><kbd>空白鍵</kbd> 跳躍 / 游泳往上</div><div><kbd>滑鼠</kbd> 轉鏡頭、<kbd>滾輪</kbd> 遠近</div>
+        <div><kbd>左鍵</kbd> 出拳（左右交替）</div><div><kbd>右鍵按住</kbd> 抓住對方</div>
+        <div>抓住時按 <kbd>左鍵</kbd> 丟出去！</div><div><kbd>F</kbd> 飛撲</div>
+        <div><kbd>E</kbd> 拿出 / 收起釣竿</div><div>釣竿：按住 <kbd>左鍵</kbd> 蓄力、放開拋竿</div>
+        <div>浮標下沉時 <kbd>左鍵</kbd> 拉竿</div><div>收線：按住 <kbd>左鍵</kbd>，張力太高就放開</div>
+        <div><kbd>1</kbd> 揮手 <kbd>2</kbd> 跳舞 <kbd>3</kbd> 坐下</div><div><kbd>Enter</kbd> 聊天</div>
+        <div><kbd>Tab</kbd>/<kbd>Esc</kbd> 房間選單</div><div><kbd>B</kbd> 釣魚圖鑑</div>
+      </div>
+      <div class="small muted">打架小技巧：連續揍對方會讓他頭暈 ⭐ 暈倒後抓起來丟下擂台就贏了！</div>
+    </div>
+  </div>
+
+  <!-- 被邀請 -->
+  <div id="toasts" class="toasts"></div>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
